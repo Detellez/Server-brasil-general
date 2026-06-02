@@ -1792,7 +1792,7 @@ function showNotification(message, msgId, type = 'info') {
                                         
                                         <div style="background: rgba(239, 68, 68, 0.15); border: 2px solid #ef4444; border-radius: 10px; padding: 15px 20px; display: flex; flex-direction: row; align-items: center; gap: 10px; justify-content: flex-start; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); width: fit-content; margin: 5px 0;">
                                             <p style="margin: 0; font-size: 18px; font-weight: bold; color: #fca5a5;">Valor a pagar:</p>
-                                            <p style="margin: 0; font-size: 28px; font-weight: 900; color: #fff; background: rgba(0,0,0,0.4); padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);">Bs. ${montoPagar}</p>
+                                            <p style="margin: 0; font-size: 28px; font-weight: 900; color: #fff; background: rgba(0,0,0,0.4); padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2);">R$ ${montoPagar}</p>
                                         </div>
                                     </div>
                                     
@@ -1804,7 +1804,7 @@ function showNotification(message, msgId, type = 'info') {
                                         
                                         <div style="display: flex; flex-direction: row; gap: 15px; align-items: center;">
                                             <div style="background: #a855f7; color: white; font-weight: bold; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">2</div>
-                                            <p style="margin: 0; font-size: 15px; color: #e2e8f0; line-height: 1.4;">Envie o comprovante para o WhatsApp <b>+591 62596174</b></p>
+                                            <p style="margin: 0; font-size: 15px; color: #e2e8f0; line-height: 1.4;">Envie o comprovante para o WhatsApp <b>+5511984906146</b></p>
                                         </div>
                                         
                                         <div style="display: flex; flex-direction: row; gap: 15px; align-items: center;">
@@ -1825,7 +1825,7 @@ function showNotification(message, msgId, type = 'info') {
 
                                 <div style="flex: 0 0 38%; background: rgba(0, 0, 0, 0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 15px; padding: 25px; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 15px rgba(0,0,0,0.5);">
                                     <div style="background: white; border-radius: 15px; padding: 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 20px rgba(0,0,0,0.6); border: 4px solid white; aspect-ratio: 1 / 1; width: 100%;">
-                                        <img src="https://i.postimg.cc/W1PMfWrC/QR.jpg" alt="Código QR de Pago" style="width: 100%; height: 100%; object-fit: contain;">
+                                        <img src="https://i.postimg.cc/Gtc7m0Cj/pix.png" alt="Código QR de Pago" style="width: 100%; height: 100%; object-fit: contain;">
                                     </div>
                                 </div>
                             </div>
@@ -2002,135 +2002,66 @@ function showNotification(message, msgId, type = 'info') {
     // =========================================================
     // 🔥 ESCUCHA EN TIEMPO REAL (FIREBASE) + ANTI-SUEÑO
     // =========================================================
-    function iniciarEscuchaFirebase() {
-        if (window.firebaseEscuchando) return; 
-        window.firebaseEscuchando = true;
+   function iniciarEscuchaFirebase() {
+        const miUsuario = localStorage.getItem('usuarioLogueado');
+        const miRol = localStorage.getItem('userRole') || 'AGENTE';
+        if (!miUsuario) return;
 
-        let source = null; // Lo declaramos aquí para que toda la función lo vea
-
-        const procesarAviso = (aviso) => {
-            if (!aviso || !aviso.id) return;
-            
-            // 🔥 REGLA 1 HORA: Ignorar mensajes viejos
-            if (Date.now() - aviso.id > 3600000) return;
-
-            const miUsuario = localStorage.getItem('usuarioLogueado');
-            if (!miUsuario) return;
-
-            // 🔥 ESCUDO ANTI-ECO PROPIO: Si yo soy el remitente (sender), ignoro el mensaje.
-            if (aviso.sender && aviso.sender.toUpperCase() === miUsuario.toUpperCase()) return;
-
-            let esParaMi = (aviso.target === 'ALL' || aviso.target.toUpperCase() === miUsuario.toUpperCase());
-            if (aviso.target === 'ALL' && aviso.omitRoles) {
-                const miRol = localStorage.getItem('userRole') || 'AGENTE';
-                if (aviso.omitRoles.includes(miRol)) esParaMi = false;
-            }
-
-            if (esParaMi) {
-                const isAlertAck = localStorage.getItem('ALERT_ACK_' + aviso.id);
-                const isNotifShown = localStorage.getItem('NOTIF_SHOWN_' + aviso.id);
-                const isDelivered = localStorage.getItem('DELIVERED_' + aviso.id);
-
-                if (!isDelivered) {
-                    localStorage.setItem('DELIVERED_' + aviso.id, 'true');
-                    
-                    // 1. CLAVAMOS LA HORA EXACTA (Al milisegundo)
-                    const tiempoCapturado = Date.now(); 
-                    
-                    // 2. Dispersamos un poco a los agentes (entre 1 y 12 segundos)
-                    const randomDelay = Math.floor(Math.random() * 11000) + 1000; 
-                    
-                    setTimeout(() => {
-                        const urlEntrega = `${CEREBRO_URL}?token=SST_V12_CORP_SECURE_2026_X9&action=ack_aviso&msgId=${aviso.id}&usuario=${encodeURIComponent(miUsuario)}&ts=${tiempoCapturado}&status=ENTREGADO`;
-                        
-                        // 3. 🔥 MOTOR DE INSISTENCIA: No se rinde si Google está lleno
-                        const enviarConInsistencia = (intentosRestantes) => {
-                            try {
-                                safeSendMessage({ action: 'proxy_fetch', url: urlEntrega, options: { method: 'GET' } }, (response) => {
-                                    // Si Google falla por exceso de tráfico, response será null o success: false
-                                    if (!response || !response.success || (response.data && response.data.error)) {
-                                        if (intentosRestantes > 0) {
-                                            // Reintentar en un tiempo aleatorio de 2 a 5 segundos
-                                            setTimeout(() => enviarConInsistencia(intentosRestantes - 1), 2000 + Math.random() * 3000);
-                                        } else {
-                                            console.warn("Ping perdido tras 6 intentos"); // Muy raro que pase de 6
-                                        }
-                                    }
-                                });
-                            } catch(e) {}
-                        };
-
-                        enviarConInsistencia(6); // 🔥 Le damos 6 VIDAS (intentos) a esta petición.
-                    }, randomDelay);
-                }
-                if (aviso.type === 'ALERT' && !isAlertAck) {
-                    localStorage.setItem('SHARED_MSG_DATA', JSON.stringify({id: aviso.id, msg: aviso.msg, timestamp: Date.now(), type: 'ALERT'}));
-                    safeSendMessage({ action: "unmute_tab" });
-                    showPersistentAlert(aviso.msg, aviso.id);
-                    
-                } else if (aviso.type === 'NORMAL' && !isNotifShown) {
-                    localStorage.setItem('NOTIF_SHOWN_' + aviso.id, 'true'); 
-                    localStorage.setItem('SHARED_MSG_DATA', JSON.stringify({id: aviso.id, msg: aviso.msg, timestamp: Date.now(), type: 'NORMAL'}));
-                    safeSendMessage({ action: "unmute_tab" });
-                    playAlertSound(1);
-                    showNotification('📢 ' + aviso.msg, aviso.id, 'info');
-                    trySystemNotification(aviso.msg, aviso.id, '📢 NOVO AVISO CRM');
-                }
-            }
-        };
-
-        // 🔥 MAGIA NEGRA: WEB LOCKS API (Garantiza 1 sola conexión a Firebase por PC)
-        if (navigator.locks) {
-            navigator.locks.request('sst_firebase_leader', { mode: 'exclusive' }, () => {
-                // SOLO 1 PESTAÑA LOGRA ENTRAR AQUÍ. LAS DEMÁS SE QUEDAN ESPERANDO EN SILENCIO.
-                return new Promise((resolve) => {
-                    const conectar = () => {
-                        source = new EventSource(FIREBASE_URL);
-                        source.addEventListener('put', function(e) {
-                            try {
-                                const fbData = JSON.parse(e.data);
-                                if (fbData && fbData.data) procesarAviso(fbData.data);
-                            } catch (err) {}
-                        });
-                        source.onerror = function() {
-                            source.close();
-                            setTimeout(conectar, 5000); // Reconexión si falla el internet
-                        };
-                    };
-                    conectar();
-                    // La promesa nunca se resuelve. Esto mantiene el "candado" cerrado
-                    // hasta que el asesor cierre esta pestaña. Al cerrarla, otra toma el control al instante.
-                });
-            }).catch(e => {});
-        } else {
-            // Fallback por si usan un navegador muy viejo que no soporta Web Locks
-            source = new EventSource(FIREBASE_URL);
-            source.addEventListener('put', function(e) {
-                try {
-                    const fbData = JSON.parse(e.data);
-                    if (fbData && fbData.data) procesarAviso(fbData.data);
-                } catch (err) {}
-            });
-            source.onerror = function() {
-                source.close();
-                setTimeout(() => { source = new EventSource(FIREBASE_URL); }, 5000);
-            };
-        }
-
-        // El escudo anti-spam de respaldo (Mantiene vivos los mensajes perdidos)
-        setInterval(() => {
-            if (document.hidden || !source || source.readyState === EventSource.CLOSED) {
-                const lastFbPoll = parseInt(localStorage.getItem('LAST_FB_POLL_TS') || '0');
-                if (Date.now() - lastFbPoll < 12000) return;
-                localStorage.setItem('LAST_FB_POLL_TS', Date.now().toString());
-
-                fetch(FIREBASE_URL + "?r=" + Date.now()) 
-                    .then(res => res.json())
-                    .then(data => { if (data) procesarAviso(data); })
-                    .catch(e => {});
-            }
-        }, 15000);
+        // Le pasa la responsabilidad de conectarse a Firebase al Background
+        safeSendMessage({
+            action: 'iniciar_escucha_maestra',
+            firebaseUrl: FIREBASE_URL,
+            usuario: miUsuario,
+            rol: miRol
+        });
     }
+
+    // 🔥 NUEVO: Escuchador para pintar la alerta enviada desde el Background
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === "renderizar_alerta") {
+            const aviso = request.aviso;
+            const miUsuario = localStorage.getItem('usuarioLogueado');
+
+            const isAlertAck = localStorage.getItem('ALERT_ACK_' + aviso.id);
+            const isNotifShown = localStorage.getItem('NOTIF_SHOWN_' + aviso.id);
+            const isDelivered = localStorage.getItem('DELIVERED_' + aviso.id);
+
+            // 🛡️ AQUÍ ESTÁ TU LÓGICA ORIGINAL RESTAURADA: Reportar ENTREGADO con Anti-Colapso
+            if (!isDelivered) {
+                localStorage.setItem('DELIVERED_' + aviso.id, 'true');
+                const tiempoCapturado = Date.now(); 
+                const randomDelay = Math.floor(Math.random() * 11000) + 1000; 
+
+                setTimeout(() => {
+                    const urlEntrega = `${CEREBRO_URL}?token=SST_V12_CORP_SECURE_2026_X9&action=ack_aviso&msgId=${aviso.id}&usuario=${encodeURIComponent(miUsuario)}&ts=${tiempoCapturado}&status=ENTREGADO`;
+                    
+                    const enviarConInsistencia = (intentosRestantes) => {
+                        try {
+                            safeSendMessage({ action: 'proxy_fetch', url: urlEntrega, options: { method: 'GET' } }, (response) => {
+                                if (!response || !response.success || (response.data && response.data.error)) {
+                                    if (intentosRestantes > 0) {
+                                        setTimeout(() => enviarConInsistencia(intentosRestantes - 1), 2000 + Math.random() * 3000);
+                                    }
+                                }
+                            });
+                        } catch(e) {}
+                    };
+                    enviarConInsistencia(6);
+                }, randomDelay);
+            }
+
+            // Pintar y Reproducir Audio
+            if (aviso.type === 'ALERT' && !isAlertAck) {
+                localStorage.setItem('SHARED_MSG_DATA', JSON.stringify({id: aviso.id, msg: aviso.msg, timestamp: Date.now(), type: 'ALERT'}));
+                showPersistentAlert(aviso.msg, aviso.id);
+            } else if (aviso.type === 'NORMAL' && !isNotifShown) {
+                localStorage.setItem('NOTIF_SHOWN_' + aviso.id, 'true');
+                localStorage.setItem('SHARED_MSG_DATA', JSON.stringify({id: aviso.id, msg: aviso.msg, timestamp: Date.now(), type: 'NORMAL'}));
+                playAlertSound(1);
+                showNotification('📢 ' + aviso.msg, aviso.id, 'info');
+            }
+        }
+    });
     // ==========================================
     // ❤️ HEARTBEAT (CRONÓMETRO + AVISOS)
     // ==========================================
