@@ -10,16 +10,17 @@
         'servidor-brasil-t1': 'https://script.google.com/macros/s/AKfycbxKkOrhazT9Bq2aSLRSY055VcibDHjGEc5-r5QSLaydEdTQ-gqf2LQQBLaDoniIaFWlNg/exec'
     };
 
-    let CEREBRO_URL = SERVERS_DB['servidor-brasil-s1']; // Valor por defecto
-    let API_URL = CEREBRO_URL;
+    let CEREBRO_URL = null;
+    let API_URL = null;
 
-    // Obtener subdominio dinámicamente y actualizar rutas
-    chrome.storage.local.get(['serverSubdomain'], function(result) {
-        if (result.serverSubdomain && SERVERS_DB[result.serverSubdomain]) {
-            CEREBRO_URL = SERVERS_DB[result.serverSubdomain];
-            API_URL = CEREBRO_URL;
-        }
-    });
+    // Obtener subdominio dinámicamente del localStorage de la web
+    const currentSubdomain = localStorage.getItem('serverSubdomain');
+    if (currentSubdomain && SERVERS_DB[currentSubdomain]) {
+        CEREBRO_URL = SERVERS_DB[currentSubdomain];
+        API_URL = CEREBRO_URL;
+    } else {
+        console.error("🚨 CRÍTICO: Nenhum servidor GSheets configurado. Conexão bloqueada.");
+    }
 
     // 🛡️ LLAVE MAESTRA DE SEGURIDAD
     const SECURITY_TOKEN = 'SST_V12_CORP_SECURE_2026_X9';
