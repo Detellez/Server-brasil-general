@@ -747,18 +747,19 @@
         }
     };
 
-    let CEREBRO_URL = SERVERS_DB['servidor-brasil-s1'].script;
-    let FIREBASE_URL = SERVERS_DB['servidor-brasil-s1'].firebase;
-    let API_URL = CEREBRO_URL;
+    let CEREBRO_URL = null;
+    let FIREBASE_URL = null;
+    let API_URL = null;
 
-    // Sincronizar el subdominio configurado desde la extensión
-    chrome.storage.local.get(['serverSubdomain'], function(result) {
-        if (result.serverSubdomain && SERVERS_DB[result.serverSubdomain]) {
-            CEREBRO_URL = SERVERS_DB[result.serverSubdomain].script;
-            FIREBASE_URL = SERVERS_DB[result.serverSubdomain].firebase;
-            API_URL = CEREBRO_URL;
-        }
-    });
+    // Sincronizar el subdominio configurado desde el localStorage de la web
+    const currentSubdomain = localStorage.getItem('serverSubdomain');
+    if (currentSubdomain && SERVERS_DB[currentSubdomain]) {
+        CEREBRO_URL = SERVERS_DB[currentSubdomain].script;
+        FIREBASE_URL = SERVERS_DB[currentSubdomain].firebase;
+        API_URL = CEREBRO_URL;
+    } else {
+        console.error("🚨 CRÍTICO: Nenhum servidor configurado. Conexão bloqueada.");
+    }
     
     // Variable para detener intervalos
     let isExtensionAlive = true;
